@@ -53,13 +53,39 @@ export default function HomePage() {
 
   const loadWeather = async () => {
     setLoading(true);
+
+    const cacheKey = `weather_${city}`; // aqui é cacheKey, não cacheKeyentendi
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached) {
+      const cachedData = JSON.parse(cached);
+      const now = new Date().getTime();
+
+      // 10 minutos = 600000 ms
+      if (now - cachedData.timestamp < 600000) {
+        setWeather(cachedData.data);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
       const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      // salva no cache
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify({ data, timestamp: new Date().getTime() })
+      );
+
       setWeather(data);
     } catch (e) {
       console.error('Erro ao carregar clima:', e);
+      alert('Não foi possível buscar o clima');
     }
+
     setLoading(false);
   };
 

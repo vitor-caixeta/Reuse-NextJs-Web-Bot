@@ -47,20 +47,15 @@ export default function PointsPage({ searchCity }: PointsPageProps) {
   };
 
   const loadPoints = async () => {
-    setLoading(true);
     try {
-      const geo = await geocodeCity(city);
-      if (!geo) {
-        alert('Não foi possível localizar a cidade.');
-        setLoading(false);
-        return;
-      }
-      const items = await fetchCollectionPoints(geo.lat, geo.lon);
-      setPoints(items);
+      const res = await fetch(`/api/points?city=${encodeURIComponent(city)}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      console.log('Pontos de coleta:', data.elements);
     } catch (e) {
-      console.error('loadPoints', e);
+      console.error('Erro ao buscar pontos:', e);
+      alert('Não foi possível buscar os pontos de coleta');
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -147,3 +142,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginBottom: 8,
   },
 };
+
