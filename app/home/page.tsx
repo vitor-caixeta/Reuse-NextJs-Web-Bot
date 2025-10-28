@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
 
 type User = {
   id: number;
@@ -16,6 +15,12 @@ type Weather = {
   main?: { temp: number };
 };
 
+declare global {
+  interface Window {
+    watsonAssistantChatOptions?: any;
+  }
+}
+
 export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [city, setCity] = useState('São Paulo');
@@ -25,19 +30,33 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Pega o token do localStorage e decodifica
+    // ==== Watson Assistant ====
+    window.watsonAssistantChatOptions = {
+      integrationID: '26280097-377f-4fb2-b345-c14bc2412445',
+      region: 'au-syd',
+      serviceInstanceID: 'e96fe989-2792-4921-b829-a3608c726397',
+      onLoad: function (instance: any) {
+        instance.render();
+      },
+    };
+
+    const script = document.createElement('script');
+    script.src =
+      'https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js';
+    document.head.appendChild(script);
+
+    // ==== Token / User ====
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const decoded: any = jwtDecode(token);
-        // Supondo que você armazenou o user no payload
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) setUser(JSON.parse(storedUser));
+const storedUser = localStorage.getItem('user');
+if (storedUser) setUser(JSON.parse(storedUser));
       } catch (e) {
         console.error('Erro ao decodificar token:', e);
       }
     }
 
+    // ==== Dicas ====
     const loadDicas = async () => {
       try {
         const res = await fetch('/api/tips');
@@ -54,14 +73,13 @@ export default function HomePage() {
   const loadWeather = async () => {
     setLoading(true);
 
-    const cacheKey = `weather_${city}`; // aqui é cacheKey, não cacheKeyentendi
+    const cacheKey = `weather_${city}`;
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
       const cachedData = JSON.parse(cached);
       const now = new Date().getTime();
 
-      // 10 minutos = 600000 ms
       if (now - cachedData.timestamp < 600000) {
         setWeather(cachedData.data);
         setLoading(false);
@@ -70,11 +88,11 @@ export default function HomePage() {
     }
 
     try {
+      // chama o endpoint Next.js
       const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // salva no cache
       localStorage.setItem(
         cacheKey,
         JSON.stringify({ data, timestamp: new Date().getTime() })
@@ -110,7 +128,9 @@ export default function HomePage() {
         {loading && <p>Carregando...</p>}
         {weather && (
           <div style={styles.weatherInfo}>
-            <p>{weather.name} — {weather.weather?.[0]?.description}</p>
+            <p>
+              {weather.name} — {weather.weather?.[0]?.description}
+            </p>
             <p>Temperatura: {weather.main?.temp}°C</p>
           </div>
         )}
@@ -132,12 +152,15 @@ export default function HomePage() {
 
       {/* Botões */}
       <div style={styles.section}>
-        <button style={styles.pointsButton} onClick={() => router.push('/points')}>
+        <button
+          style={styles.pointsButton}
+          onClick={() => router.push('/points')}
+        >
           Ver Pontos de Coleta próximos
-        </button>        
+        </button>
         <button
           style={styles.profileButton}
-          onClick={() => router.push('/profile')} 
+          onClick={() => router.push('/profile')}
         >
           Perfil / Sair
         </button>
@@ -147,83 +170,14 @@ export default function HomePage() {
 }
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#fff',
-    color: '#111',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: 20,
-    fontFamily: 'Arial, sans-serif',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 700,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#555',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  section: {
-    marginTop: 20,
-    width: '100%',
-    maxWidth: 600,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  input: {
-    padding: 10,
-    borderRadius: 8,
-    border: '1px solid #ddd',
-    width: '80%',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  button: {
-    padding: '10px 20px',
-    borderRadius: 8,
-    backgroundColor: '#2f855a',
-    color: '#fff',
-    border: 'none',
-    cursor: 'pointer',
-    width: '80%',
-    marginBottom: 8,
-  },
-  weatherInfo: {
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  dicaCard: {
-    backgroundColor: '#f9f9f9',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    width: '80%',
-    textAlign: 'center',
-  },
-  pointsButton: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#285e46',
-    color: '#fff',
-    border: 'none',
-    width: '80%',
-    marginTop: 12,
-    cursor: 'pointer',
-  },
-  profileButton: {
-    padding: 12,
-    borderRadius: 8,
-    border: '1px solid #2f855a',
-    background: 'none',
-    color: '#2f855a',
-    width: '80%',
-    marginTop: 8,
-    cursor: 'pointer',
-  },
+  container: { minHeight: '100vh', backgroundColor: '#fff', color: '#111', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 20, fontFamily: 'Arial, sans-serif' },
+  title: { fontSize: 32, fontWeight: 700, textAlign: 'center' },
+  subtitle: { fontSize: 18, color: '#555', textAlign: 'center', marginTop: 4 },
+  section: { marginTop: 20, width: '100%', maxWidth: 600, display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  input: { padding: 10, borderRadius: 8, border: '1px solid #ddd', width: '80%', marginBottom: 12, textAlign: 'center' },
+  button: { padding: '10px 20px', borderRadius: 8, backgroundColor: '#2f855a', color: '#fff', border: 'none', cursor: 'pointer', width: '80%', marginBottom: 8 },
+  weatherInfo: { marginTop: 12, textAlign: 'center' },
+  dicaCard: { backgroundColor: '#f9f9f9', padding: 12, borderRadius: 8, marginBottom: 8, width: '80%', textAlign: 'center' },
+  pointsButton: { padding: 12, borderRadius: 8, backgroundColor: '#285e46', color: '#fff', border: 'none', width: '80%', marginTop: 12, cursor: 'pointer' },
+  profileButton: { padding: 12, borderRadius: 8, border: '1px solid #2f855a', background: 'none', color: '#2f855a', width: '80%', marginTop: 8, cursor: 'pointer' },
 };
