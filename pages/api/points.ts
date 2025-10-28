@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     cache[cacheKey] = { data, timestamp: now };
 
     res.status(200).json(data);
-  } catch (err: any) {
+    } catch (err: unknown) {
     console.error('Erro ao buscar pontos de coleta:', err);
     res.status(500).json({ error: 'Não foi possível buscar os pontos de coleta' });
   }
