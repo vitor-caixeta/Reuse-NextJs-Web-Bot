@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const data = await response.json();
     res.status(200).json(data);
-  } catch (err: any) {
+    } catch (err: unknown) {
     console.error('Erro no weather API:', err);
     res.status(500).json({ error: 'Não foi possível buscar o clima' });
   }
