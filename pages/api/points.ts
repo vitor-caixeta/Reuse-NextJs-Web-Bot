@@ -1,7 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+// Tipagem para o cache
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 // Cache em memória (simples)
-let cache: { [key: string]: { data: any; timestamp: number } } = {};
+const cache: Record<string, CacheEntry<any>> = {};
 const CACHE_TIME = 30 * 60 * 1000; // 30 minutos
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -35,14 +41,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw new Error(`Overpass API retornou erro: ${text}`);
     }
 
-    const data = await response.json();
+    const data: unknown = await response.json();
 
     // Armazena no cache
     cache[cacheKey] = { data, timestamp: now };
 
     res.status(200).json(data);
-    } catch (err: unknown) {
-    console.error('Erro ao buscar pontos de coleta:', err);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error('Erro ao buscar pontos de coleta:', err.message);
+    } else {
+      console.error('Erro desconhecido ao buscar pontos de coleta:', err);
+    }
     res.status(500).json({ error: 'Não foi possível buscar os pontos de coleta' });
   }
 }
